@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 
-from train import CATEGORICAL_MAPS
+from Train import CATEGORICAL_MAPS
 
 
 class Statistics:
@@ -30,9 +30,7 @@ class Statistics:
             enc[col] = enc[col].apply(lambda v: classes.index(v) if v in classes else np.nan)
         return enc
 
-    # ---------------------------------------------------------------
     # 1. DATA STATISTICS (overview)
-    # ---------------------------------------------------------------
     def _render_data_statistics(self):
         st.subheader("Dataset overview")
         st.markdown(
@@ -111,9 +109,7 @@ class Statistics:
             f"**{self.df.shape[0]}** rows in total."
         )
 
-    # ---------------------------------------------------------------
     # 3. MISSING VALUES
-    # ---------------------------------------------------------------
     def _render_missing_values(self):
         st.subheader("Missing values")
         missing = self.df.isnull().sum()
@@ -140,9 +136,7 @@ class Statistics:
             )
             st.plotly_chart(fig_missing, use_container_width=True)
 
-    # ---------------------------------------------------------------
     # 4. NUMERIC STATS
-    # ---------------------------------------------------------------
     def _render_numeric_stats(self):
         st.subheader("Numeric statistics")
         st.markdown("Descriptive statistics (count, mean, std, min, quartiles, max) for every numerical column.")
@@ -151,9 +145,7 @@ class Statistics:
         desc = desc.round(2)
         st.dataframe(desc, use_container_width=True)
 
-    # ---------------------------------------------------------------
     # 5. CORRELATION HEATMAP
-    # ---------------------------------------------------------------
     def _render_heatmap(self):
         st.subheader("Correlation heatmap")
         enc_df = self._encoded_df()
@@ -191,9 +183,7 @@ class Statistics:
         fig_top10.update_layout(height=550)
         st.plotly_chart(fig_top10, use_container_width=True)
 
-    # ---------------------------------------------------------------
     # 6. FEATURE SELECTION + LINEAR REGRESSION MAE - Task 2 (Member 2 - Cau2.py)
-    # ---------------------------------------------------------------
     def _render_mae_comparison(self):
         st.subheader("Feature selection & MAE comparison (Linear Regression)")
         st.markdown(
@@ -277,9 +267,7 @@ class Statistics:
         fig_mae.update_layout(height=550, xaxis_tickangle=-15, showlegend=False)
         st.plotly_chart(fig_mae, use_container_width=True)
 
-    # ---------------------------------------------------------------
     # 7. NUMERIC EXPLORER
-    # ---------------------------------------------------------------
     def _render_numeric_explorer(self):
         st.subheader("Numeric explorer")
         col = st.selectbox("Choose a numeric column", self.numeric_cols, key="numeric_explorer_col")
@@ -305,9 +293,7 @@ class Statistics:
             )
             st.plotly_chart(fig_box, use_container_width=True)
 
-    # ---------------------------------------------------------------
     # 8. CATEGORICAL EXPLORER
-    # ---------------------------------------------------------------
     def _render_categorical_explorer(self):
         st.subheader("Categorical explorer")
         col = st.selectbox("Choose a categorical column", self.categorical_cols, key="categorical_explorer_col")
