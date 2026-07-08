@@ -6,7 +6,7 @@ class Info:
  
         st.markdown(
             """
-            ### 🎓 Introduction to Machine Learning - Midterm Project
+            ### Introduction to Machine Learning - Midterm Project
             **Project name:** Student Performance Prediction
             **Dataset:** Student Performance Dataset - UCI Machine Learning Repository
             """
