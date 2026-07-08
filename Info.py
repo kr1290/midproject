@@ -19,7 +19,7 @@ class Info:
         with col1:
             st.markdown(
                 """
-                #### 👨‍💻 Member 1
+                #### Member 1
                 - **Name:** Phan Phạm Thùy Vân
                 - **Student ID:** 52400254
                 - **Role:** Data Preprocessing & Machine Learning
@@ -31,7 +31,7 @@ class Info:
         with col2:
             st.markdown(
                 """
-                #### 📊 Member 2
+                #### Member 2
                 - **Name:** Hoàng Ngọc Mỹ Anh
                 - **Student ID:** 52400041
                 -  **Role:** Feature Selection & Data Analysis
@@ -43,7 +43,7 @@ class Info:
         with col3:
             st.markdown(
                 """
-                #### 🖥️ Member 3
+                #### Member 3
                 - **Name:** Nguyễn Ngọc Kim Lợi
                 - **Student ID:** 52400211
                 - **Role:** Application & Integration
