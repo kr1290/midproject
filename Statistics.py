@@ -188,14 +188,9 @@ class Statistics:
         st.subheader("Feature selection & MAE comparison (Linear Regression)")
         st.markdown(
             """
-            This reproduces Member 2's feature-selection experiment: predicting
-            the final grade (**G3**) with **Linear Regression**, comparing 5
-            feature sets built from each attribute's correlation with G3. All
-            attributes are considered here, **including G1 and G2**, exactly
-            as in the original analysis.
-
-            Model performance is evaluated using **Mean Absolute Error (MAE)**,
-            where a lower MAE indicates more accurate predictions.
+            This section compares **Linear Regression** across five correlation-based
+            feature sets. Performance is measured using **Mean Absolute Error (MAE)**,
+            where lower values indicate better prediction accuracy.
             """
         )
 
