@@ -5,7 +5,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
-DATA_PATH = BASE_DIR.parent / "DATA" / "student-mat.csv"
+DATA_PATH = BASE_DIR / "DATA" / "student-mat.csv"
 
 MODEL_PATH = BASE_DIR / "best_student_model.pkl"
 
