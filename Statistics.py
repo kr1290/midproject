@@ -346,10 +346,11 @@ class Statistics:
         st.subheader("Classification model comparison (Task 1)")
         st.markdown(
             """
-            Reproduces Member 1's model comparison (`motel_training.py`):
-            **Logistic Regression**, **Random Forest**, and **SVM** trained
-            on the same 80/20 split (`random_state=42`) to predict
-            **Pass/Fail** from the final grade (G3 ≥ 10).
+            Compares the performance of **Logistic Regression**, **Random Forest**, and **SVM**
+            using the same 80/20 train-test split (`random_state=42`) to predict
+            student **Pass/Fail** (`G3 ≥ 10`). Performance is evaluated using
+            **Accuracy, Precision, Recall, F1-score, training time, testing time,
+            and confusion matrices**.
             """
         )
 
