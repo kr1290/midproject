@@ -436,18 +436,18 @@ class Statistics:
         st.title("📊 Data Statistics")
 
         tabs = st.tabs([
-            "Dataset Overview", "Model Comparison", "Heatmap", "MAE Comparison",
-            "Numeric", "Categorical",
+            "Dataset Overview", "Numeric", "Categorical",
+            "Model Comparison", "Heatmap", "MAE Comparison",
         ])
         with tabs[0]:
             self._render_dataset_overview()
         with tabs[1]:
-            self._render_model_comparison()
-        with tabs[2]:
-            self._render_heatmap()
-        with tabs[3]:
-            self._render_mae_comparison()
-        with tabs[4]:
             self._render_numeric()
-        with tabs[5]:
+        with tabs[2]:
             self._render_categorical_explorer()
+        with tabs[3]:
+            self._render_model_comparison()
+        with tabs[4]:
+            self._render_heatmap()
+        with tabs[5]:
+            self._render_mae_comparison()
