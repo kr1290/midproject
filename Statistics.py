@@ -7,12 +7,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 
-from Train import CATEGORICAL_MAPS
+from Train import CATEGORICAL_MAPS, DATA_PATH, train_all_classifiers
 
 
 class Statistics:
-    """Statistics page split into sub-tabs: Data Statistics, Data Schema,
-    Missing Values, Numeric Stats, Heatmap, Numeric Explorer, Categorical."""
+    """Statistics page split into sub-tabs: Dataset Overview, Missing Values,
+    Numeric Stats, Heatmap, MAE Comparison, Model Comparison, Numeric
+    Explorer, Categorical."""
 
     def __init__(self, df: pd.DataFrame):
         self.df = df
@@ -30,8 +31,10 @@ class Statistics:
             enc[col] = enc[col].apply(lambda v: classes.index(v) if v in classes else np.nan)
         return enc
 
-    # 1. DATA STATISTICS (overview)
-    def _render_data_statistics(self):
+    # ---------------------------------------------------------------
+    # 1. DATASET OVERVIEW (Data Statistics + Data Schema merged)
+    # ---------------------------------------------------------------
+    def _render_dataset_overview(self):
         st.subheader("Dataset overview")
         st.markdown(
             f"""
@@ -78,8 +81,7 @@ class Statistics:
         )
         st.plotly_chart(fig_pass, use_container_width=True)
 
-    # 2. DATA SCHEMA
-    def _render_data_schema(self):
+        st.divider()
         st.subheader("Data schema")
         st.markdown("Column name, data type, and value range/options for every attribute in the dataset.")
 
@@ -109,8 +111,7 @@ class Statistics:
             f"**{self.df.shape[0]}** rows in total."
         )
 
-    # 3. MISSING VALUES
-    def _render_missing_values(self):
+        st.divider()
         st.subheader("Missing values")
         missing = self.df.isnull().sum()
         missing_pct = (missing / len(self.df) * 100).round(2)
@@ -136,8 +137,10 @@ class Statistics:
             )
             st.plotly_chart(fig_missing, use_container_width=True)
 
-    # 4. NUMERIC STATS
-    def _render_numeric_stats(self):
+    # ---------------------------------------------------------------
+    # 2. NUMERIC (Numeric Stats + Numeric Explorer merged)
+    # ---------------------------------------------------------------
+    def _render_numeric(self):
         st.subheader("Numeric statistics")
         st.markdown("Descriptive statistics (count, mean, std, min, quartiles, max) for every numerical column.")
         desc = self.df[self.numeric_cols].describe().T
@@ -145,17 +148,38 @@ class Statistics:
         desc = desc.round(2)
         st.dataframe(desc, use_container_width=True)
 
-    # 5. CORRELATION HEATMAP
+        st.divider()
+        st.subheader("Numeric explorer")
+        col = st.selectbox("Choose a numeric column", self.numeric_cols, key="numeric_explorer_col")
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Mean", f"{self.df[col].mean():.2f}")
+        c2.metric("Median", f"{self.df[col].median():.2f}")
+        c3.metric("Std dev", f"{self.df[col].std():.2f}")
+        c4.metric("Min / Max", f"{self.df[col].min()} / {self.df[col].max()}")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            fig_dist = px.histogram(
+                self.df, x=col, nbins=20, color_discrete_sequence=["#4C78A8"],
+                title=f"Distribution of {col}",
+            )
+            st.plotly_chart(fig_dist, use_container_width=True)
+        with c2:
+            fig_box = px.box(
+                self.df_labeled, x="pass_label", y=col, color="pass_label",
+                color_discrete_map={"Pass": "#2E8B57", "Fail": "#D64545"},
+                title=f"{col} by Pass/Fail",
+            )
+            st.plotly_chart(fig_box, use_container_width=True)
+
+    # ---------------------------------------------------------------
+    # 3. CORRELATION HEATMAP
+    # ---------------------------------------------------------------
     def _render_heatmap(self):
         st.subheader("Correlation heatmap")
         enc_df = self._encoded_df()
         corr_matrix = enc_df.drop(columns=["G1", "G2"]).corr(numeric_only=True)
-        fig_heatmap = px.imshow(
-            corr_matrix, color_continuous_scale="RdBu_r", zmin=-1, zmax=1,
-            title="Correlation heatmap across attributes (excluding G1, G2)",
-        )
-        fig_heatmap.update_layout(height=700)
-        st.plotly_chart(fig_heatmap, use_container_width=True)
 
         st.subheader("Correlation of each attribute with G3")
         corr_g3 = corr_matrix["G3"].drop(["G3"]).sort_values(key=lambda s: s.abs(), ascending=False)
@@ -183,19 +207,20 @@ class Statistics:
         fig_top10.update_layout(height=550)
         st.plotly_chart(fig_top10, use_container_width=True)
 
-    # 6. FEATURE SELECTION + LINEAR REGRESSION MAE - Task 2 (Member 2 - Cau2.py)
+        fig_heatmap = px.imshow(
+            corr_matrix, color_continuous_scale="RdBu_r", zmin=-1, zmax=1,
+            title="Correlation heatmap across attributes (excluding G1, G2)",
+        )
+        fig_heatmap.update_layout(height=700)
+        st.plotly_chart(fig_heatmap, use_container_width=True)
+
+    # ---------------------------------------------------------------
+    # 5. FEATURE SELECTION + LINEAR REGRESSION MAE - Task 2 (Member 2)
+    # ---------------------------------------------------------------
     def _render_mae_comparison(self):
         st.subheader("Feature selection & MAE comparison (Linear Regression)")
-        st.markdown(
-            """
-            This section compares **Linear Regression** across five correlation-based
-            feature sets. Performance is measured using **Mean Absolute Error (MAE)**,
-            where lower values indicate better prediction accuracy.
-            """
-        )
 
-        # --- 1. Correlation with G3 on the full encoded dataset (G1, G2
-        # included), same as the original script ---
+        # --- Same preprocessing as the original script (G1, G2 included) ---
         enc_df = self._encoded_df()
         target = "G3"
         X_all = enc_df.drop(columns=[target])
@@ -204,7 +229,20 @@ class Statistics:
         corr = enc_df.corr(numeric_only=True)
         corr_target = corr[target].drop(target).sort_values(key=lambda s: s.abs(), ascending=False)
 
-        # --- 2. Feature sets, same as the original script ---
+        def _mae_for(cols: list[str]) -> float:
+            X_sub = X_all[cols]
+            X_train, X_test, y_train, y_test = train_test_split(
+                X_sub, y, test_size=0.2, random_state=42
+            )
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_test_scaled = scaler.transform(X_test)
+            model = LinearRegression()
+            model.fit(X_train_scaled, y_train)
+            y_pred = model.predict(X_test_scaled)
+            return mean_absolute_error(y_test, y_pred)
+
+        # --- Fixed reference feature sets, same as the original script ---
         feature_sets = {
             "All features (Full)": X_all.columns.tolist(),
             "Top 10 highest correlation": corr_target.head(10).index.tolist(),
@@ -213,31 +251,71 @@ class Statistics:
             "Threshold |corr| > 0.2": corr_target[corr_target.abs() > 0.2].index.tolist(),
         }
 
-        # --- 3. Linear Regression + MAE for each feature set ---
         results = []
         for set_name, cols in feature_sets.items():
             if len(cols) == 0:
                 continue
-            X_sub = X_all[cols]
-            X_train, X_test, y_train, y_test = train_test_split(
-                X_sub, y, test_size=0.2, random_state=42
-            )
-            scaler = StandardScaler()
-            X_train_scaled = scaler.fit_transform(X_train)
-            X_test_scaled = scaler.transform(X_test)
-
-            model = LinearRegression()
-            model.fit(X_train_scaled, y_train)
-            y_pred = model.predict(X_test_scaled)
-
-            mae = mean_absolute_error(y_test, y_pred)
+            mae = _mae_for(cols)
             results.append({"Feature set": set_name, "Number of features": len(cols), "MAE": mae})
+
+        # --- Interactive: let the user pick how many top-correlated
+        # features to use, and add that result to the comparison ---
+        st.markdown("#### Try a custom number of features")
+        max_n = len(X_all.columns)
+        n_feats = st.slider(
+            "Number of top-correlated features to use",
+            min_value=1, max_value=max_n, value=5, key="mae_n_features",
+        )
+        custom_cols = corr_target.head(n_feats).index.tolist()
+        custom_mae = _mae_for(custom_cols)
+        st.metric(f"MAE with top {n_feats} feature(s)", f"{custom_mae:.4f}")
+        with st.expander("🔍 View the selected features"):
+            st.markdown(", ".join(custom_cols))
+
+        # Detailed view: sweep MAE across every possible feature count so
+        # the trend (and the point currently picked by the slider) is clear
+        sweep_df = pd.DataFrame(
+            [{"N features": n, "MAE": _mae_for(corr_target.head(n).index.tolist())}
+             for n in range(1, max_n + 1)]
+        )
+        fig_sweep = px.line(
+            sweep_df, x="N features", y="MAE", markers=True,
+            title="MAE vs. number of top-correlated features used",
+        )
+        fig_sweep.add_vline(
+            x=n_feats, line_dash="dash", line_color="#ff7f0e",
+            annotation_text=f"Selected: {n_feats}", annotation_position="top",
+        )
+        fig_sweep.add_scatter(
+            x=[n_feats], y=[custom_mae], mode="markers",
+            marker=dict(size=13, color="#ff7f0e", symbol="star"),
+            name=f"Top {n_feats}", showlegend=False,
+        )
+        best_n = int(sweep_df.loc[sweep_df["MAE"].idxmin(), "N features"])
+        best_n_mae = sweep_df["MAE"].min()
+        fig_sweep.add_scatter(
+            x=[best_n], y=[best_n_mae], mode="markers",
+            marker=dict(size=13, color="#2ca02c", symbol="diamond"),
+            name=f"Best: Top {best_n}",
+        )
+        fig_sweep.update_layout(height=450)
+        st.plotly_chart(fig_sweep, use_container_width=True)
+        st.caption(
+            f"📉 The lowest MAE across all possible feature counts is "
+            f"**{best_n_mae:.4f}** with the **top {best_n}** correlated features."
+        )
+
+        results.append({
+            "Feature set": f"Custom (Top {n_feats})",
+            "Number of features": n_feats,
+            "MAE": custom_mae,
+        })
 
         results_df = pd.DataFrame(results).sort_values("MAE").reset_index(drop=True)
 
         best_row = results_df.iloc[0]
         st.success(
-            f"🏆 Best feature set: **{best_row['Feature set']}** "
+            f"🏆 Best feature set so far: **{best_row['Feature set']}** "
             f"(MAE = {best_row['MAE']:.4f}, {int(best_row['Number of features'])} features)"
         )
 
@@ -246,49 +324,89 @@ class Statistics:
             use_container_width=True, hide_index=True,
         )
 
-        with st.expander("🔍 View features used in each set"):
-            for name, cols in feature_sets.items():
-                st.markdown(f"**{name}** ({len(cols)} features): {', '.join(cols) if cols else '—'}")
-
-        # --- 4. Plotly bar chart ---
+        # --- Bar chart, custom result highlighted in a different color ---
+        results_df["Type"] = np.where(
+            results_df["Feature set"].str.startswith("Custom"), "Custom", "Reference set"
+        )
         fig_mae = px.bar(
-            results_df, x="Feature set", y="MAE",
-            color="MAE", color_continuous_scale="Greens_r",
+            results_df, x="Feature set", y="MAE", color="Type",
+            color_discrete_map={"Reference set": "#2ca02c", "Custom": "#ff7f0e"},
             text=results_df["MAE"].map(lambda v: f"{v:.3f}"),
             title="MAE comparison across feature sets (Linear Regression)",
             labels={"MAE": "MAE (lower = better)"},
         )
         fig_mae.update_traces(textposition="outside")
-        fig_mae.update_layout(height=550, xaxis_tickangle=-15, showlegend=False)
+        fig_mae.update_layout(height=550, xaxis_tickangle=-15)
         st.plotly_chart(fig_mae, use_container_width=True)
 
-    # 7. NUMERIC EXPLORER
-    def _render_numeric_explorer(self):
-        st.subheader("Numeric explorer")
-        col = st.selectbox("Choose a numeric column", self.numeric_cols, key="numeric_explorer_col")
+    # ---------------------------------------------------------------
+    # 6. CLASSIFICATION MODEL COMPARISON - Task 1 (Member 1)
+    # ---------------------------------------------------------------
+    def _render_model_comparison(self):
+        st.subheader("Classification model comparison (Task 1)")
+        st.markdown(
+            """
+            Reproduces Member 1's model comparison (`motel_training.py`):
+            **Logistic Regression**, **Random Forest**, and **SVM** trained
+            on the same 80/20 split (`random_state=42`) to predict
+            **Pass/Fail** from the final grade (G3 ≥ 10).
+            """
+        )
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Mean", f"{self.df[col].mean():.2f}")
-        c2.metric("Median", f"{self.df[col].median():.2f}")
-        c3.metric("Std dev", f"{self.df[col].std():.2f}")
-        c4.metric("Min / Max", f"{self.df[col].min()} / {self.df[col].max()}")
+        _, _, metrics_df, confusions = train_all_classifiers(str(DATA_PATH))
 
-        c1, c2 = st.columns(2)
-        with c1:
-            fig_dist = px.histogram(
-                self.df, x=col, nbins=20, color_discrete_sequence=["#4C78A8"],
-                title=f"Distribution of {col}",
-            )
-            st.plotly_chart(fig_dist, use_container_width=True)
-        with c2:
-            fig_box = px.box(
-                self.df_labeled, x="pass_label", y=col, color="pass_label",
-                color_discrete_map={"Pass": "#2E8B57", "Fail": "#D64545"},
-                title=f"{col} by Pass/Fail",
-            )
-            st.plotly_chart(fig_box, use_container_width=True)
+        best_row = metrics_df.iloc[0]
+        st.success(
+            f"🏆 Best model: **{best_row['Model']}** "
+            f"(Accuracy = {best_row['Accuracy']:.4f})"
+        )
 
-    # 8. CATEGORICAL EXPLORER
+        st.dataframe(
+            metrics_df.style.format({
+                "Accuracy": "{:.4f}", "Precision": "{:.4f}", "Recall": "{:.4f}",
+                "F1-score": "{:.4f}", "Train time (s)": "{:.4f}", "Test time (s)": "{:.4f}",
+            }),
+            use_container_width=True, hide_index=True,
+        )
+
+        metrics_long = metrics_df.melt(
+            id_vars="Model", value_vars=["Accuracy", "Precision", "Recall", "F1-score"],
+            var_name="Metric", value_name="Score",
+        )
+        fig_models = px.bar(
+            metrics_long, x="Model", y="Score", color="Metric", barmode="group",
+            text=metrics_long["Score"].map(lambda v: f"{v:.3f}"),
+            title="Model performance comparison (Accuracy / Precision / Recall / F1-score)",
+        )
+        fig_models.update_traces(textposition="outside")
+        fig_models.update_layout(height=550, yaxis_range=[0, 1])
+        st.plotly_chart(fig_models, use_container_width=True)
+
+        fig_time = px.bar(
+            metrics_df, x="Model", y=["Train time (s)", "Test time (s)"], barmode="group",
+            title="Training / inference time by model",
+            labels={"value": "Time (seconds)", "variable": "Phase"},
+        )
+        fig_time.update_layout(height=450)
+        st.plotly_chart(fig_time, use_container_width=True)
+
+        # --- Confusion matrices: shows exactly where each model gets
+        # Pass/Fail wrong, side by side for direct comparison ---
+        st.markdown("#### Confusion matrices (test set)")
+        cols = st.columns(len(confusions))
+        for col, (name, cm) in zip(cols, confusions.items()):
+            with col:
+                fig_cm = px.imshow(
+                    cm, text_auto=True, color_continuous_scale="Blues",
+                    x=["Pred: Fail", "Pred: Pass"], y=["Actual: Fail", "Actual: Pass"],
+                    title=name,
+                )
+                fig_cm.update_layout(height=350, coloraxis_showscale=False)
+                st.plotly_chart(fig_cm, use_container_width=True)
+
+    # ---------------------------------------------------------------
+    # 7. CATEGORICAL EXPLORER
+    # ---------------------------------------------------------------
     def _render_categorical_explorer(self):
         st.subheader("Categorical explorer")
         col = st.selectbox("Choose a categorical column", self.categorical_cols, key="categorical_explorer_col")
@@ -318,23 +436,18 @@ class Statistics:
         st.title("📊 Data Statistics")
 
         tabs = st.tabs([
-            "Data Statistics", "Data Schema", "Heatmap", "MAE Comparison",
-            "Missing Values", "Numeric Stats",
-            "Numeric Explorer", "Categorical",
+            "Dataset Overview", "Model Comparison", "Heatmap", "MAE Comparison",
+            "Numeric", "Categorical",
         ])
         with tabs[0]:
-            self._render_data_statistics()
+            self._render_dataset_overview()
         with tabs[1]:
-            self._render_data_schema()
+            self._render_model_comparison()
         with tabs[2]:
             self._render_heatmap()
         with tabs[3]:
             self._render_mae_comparison()
         with tabs[4]:
-            self._render_missing_values()
+            self._render_numeric()
         with tabs[5]:
-            self._render_numeric_stats()
-        with tabs[6]:
-            self._render_numeric_explorer()
-        with tabs[7]:
             self._render_categorical_explorer()
