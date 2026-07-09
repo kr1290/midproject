@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from Train import CATEGORICAL_MAPS, NUMERICAL_RANGES, LABELS, Train
+from Train import CATEGORICAL_MAPS, CLASSIFIER_NAMES, NUMERICAL_RANGES, LABELS, Train
 
 
 class Home:
@@ -220,9 +220,16 @@ class Home:
                 step=1,
             )
 
-    def _render_form(self) -> tuple[dict, bool]:
+    def _render_form(self) -> tuple[dict, str, bool]:
         input_data = {}
         with st.form("prediction_form"):
+            model_name = st.selectbox(
+                "Model used for prediction",
+                CLASSIFIER_NAMES,
+                index=0,
+                help="Choose which of the 3 trained classifiers (Task 1) makes the prediction.",
+            )
+
             st.subheader("Input information")
             cols = st.columns(4)
             for i, col in enumerate(self.PRIMARY_FIELDS):
@@ -242,9 +249,9 @@ class Home:
  
             submitted = st.form_submit_button("Predict", use_container_width=True, type="primary")
  
-        return input_data, submitted
+        return input_data, model_name, submitted
  
-    def _render_result(self, pred: int, proba):
+    def _render_result(self, pred: int, proba, model_name: str):
         st.divider()
         st.subheader("Prediction result")
         if pred == 1:
@@ -257,7 +264,28 @@ class Home:
             if proba is not None:
                 msg += f"\nProbability of failing: **{proba[0] * 100:.1f}%**"
             st.error(msg)
-        st.caption("Model in use: **Logistic Regression**")
+
+    def _render_model_comparison(self, input_data: dict, chosen_model: str):
+        st.divider()
+        st.subheader("Compare across all models")
+        st.caption("Same student information, predicted by all 3 trained classifiers.")
+
+        all_results = self.train.predict_all(input_data)
+        rows = []
+        for name, (pred, proba) in all_results.items():
+            rows.append({
+                "Model": name + (" ⭐" if name == chosen_model else ""),
+                "Prediction": "Pass ✅" if pred == 1 else "Fail ❌",
+                "Confidence": f"{proba[pred] * 100:.1f}%" if proba is not None else "—",
+            })
+        comparison_df = pd.DataFrame(rows)
+        st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+        agree = len({r[0] for r in all_results.values()}) == 1
+        if agree:
+            st.info("🤝 All 3 models agree on this prediction.")
+        else:
+            st.warning("⚠️ The models disagree — treat this case as borderline.")
  
     def render(self):
         title_col, badge_col = st.columns([5, 1])
@@ -276,7 +304,7 @@ class Home:
                         font-weight:600;
                         white-space: nowrap;
                         display:inline-block;">
-                        Logistic Regression
+                        3 models available
                     </span>
                 </div>
                 """,
@@ -287,7 +315,8 @@ class Home:
         )
         st.divider()
  
-        input_data, submitted = self._render_form()
+        input_data, model_name, submitted = self._render_form()
         if submitted:
-            pred, proba = self.train.predict(input_data)
-            self._render_result(pred, proba)
+            pred, proba = self.train.predict(input_data, model_name)
+            self._render_result(pred, proba, model_name)
+            self._render_model_comparison(input_data, model_name)
