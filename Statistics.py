@@ -343,7 +343,7 @@ class Statistics:
     # 6. CLASSIFICATION MODEL COMPARISON - Task 1 (Member 1)
     # ---------------------------------------------------------------
     def _render_model_comparison(self):
-        st.subheader("Classification model comparison (Task 1)")
+        st.subheader("Classification model comparison")
         st.markdown(
             """
             Compares the performance of **Logistic Regression**, **Random Forest**, and **SVM**
