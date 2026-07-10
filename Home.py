@@ -254,16 +254,40 @@ class Home:
     def _render_result(self, pred: int, proba, model_name: str):
         st.divider()
         st.subheader("Prediction result")
+
         if pred == 1:
-            msg = "### ✅ Prediction: PASS"
-            if proba is not None:
-                msg += f"\nProbability of passing: **{proba[1] * 100:.1f}%**"
-            st.success(msg)
+            accent, bg, icon, label = "#0F766E", "#ECFDF5", "🎉", "PASS"
+            detail = (
+                f"Estimated probability of passing: <strong>{proba[1] * 100:.1f}%</strong>"
+                if proba is not None else ""
+            )
         else:
-            msg = "### ❌ Prediction: FAIL"
-            if proba is not None:
-                msg += f"\nProbability of failing: **{proba[0] * 100:.1f}%**"
-            st.error(msg)
+            accent, bg, icon, label = "#9A3412", "#FFF7ED", "⚠️", "FAIL"
+            detail = (
+                f"Estimated probability of failing: <strong>{proba[0] * 100:.1f}%</strong>"
+                if proba is not None else ""
+            )
+
+        st.markdown(
+            f"""
+            <div style="
+                border-left: 8px solid {accent};
+                background: {bg};
+                border-radius: 12px;
+                padding: 20px 24px;
+                margin-top: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            ">
+                <div style="font-size:24px; font-weight:800; color:{accent}; letter-spacing:0.5px;">
+                    {icon}&nbsp; {label}
+                </div>
+                <div style="font-size:15px; color:#3f3f3f; margin-top:8px;">
+                    {detail}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     def _render_model_comparison(self, input_data: dict, chosen_model: str):
         st.divider()
@@ -288,6 +312,37 @@ class Home:
             st.warning("⚠️ The models disagree — treat this case as borderline.")
  
     def render(self):
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stFormSubmitButton"] button,
+            div[data-testid="stFormSubmitButton"] button[kind="primary"],
+            div[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"],
+            button[data-testid="stBaseButton-primaryFormSubmit"] {
+                background-color: #0F766E !important;
+                border-color: #0F766E !important;
+                color: #ffffff !important;
+                transition: background-color 0.15s ease, border-color 0.15s ease;
+            }
+            div[data-testid="stFormSubmitButton"] button *,
+            button[data-testid="stBaseButton-primaryFormSubmit"] * {
+                color: #ffffff !important;
+            }
+            div[data-testid="stFormSubmitButton"] button:hover,
+            button[data-testid="stBaseButton-primaryFormSubmit"]:hover {
+                background-color: #0B5C56 !important;
+                border-color: #0B5C56 !important;
+            }
+            div[data-testid="stFormSubmitButton"] button:active,
+            button[data-testid="stBaseButton-primaryFormSubmit"]:active {
+                background-color: #094A45 !important;
+                border-color: #094A45 !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
         title_col, badge_col = st.columns([5, 1])
         with title_col:
             st.title("🎓 Student Performance Predictor")
