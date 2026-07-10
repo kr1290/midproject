@@ -319,8 +319,8 @@ class Home:
             div[data-testid="stFormSubmitButton"] button[kind="primary"],
             div[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"],
             button[data-testid="stBaseButton-primaryFormSubmit"] {
-                background-color: #0F766E !important;
-                border-color: #0F766E !important;
+                background-color: #000080 !important;
+                border-color: #000080 !important;
                 color: #ffffff !important;
                 transition: background-color 0.15s ease, border-color 0.15s ease;
             }
